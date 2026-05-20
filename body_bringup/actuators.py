@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int32 
+from std_msgs.msg import Int32, Float64
 from sensor_msgs.msg import Joy
 from st3215 import ST3215
 import time
@@ -15,7 +15,7 @@ class ServoController(Node):
             10
         )
         self.position_publisher = self.create_publisher(
-            Int32,
+            Float64,
             '/servo_position_pan',
             10
         )
@@ -26,19 +26,23 @@ class ServoController(Node):
     def servo_callback(self, msg):
         command = msg.data
         if command == 1:
-            self.servo.MoveTo(1,int(100*(4095 / 360)), 500)  # Move to 100 degrees
+            self.servo.StartServo(1)
+            self.servo.Rotate(1, 1500)  # Move right
         elif command == -1:
-            self.servo.MoveTo(1, 0, 500)  # Move to 0 degrees
+            self.servo.StartServo(1)
+            self.servo.Rotate(1, -1500)  # Move left
         elif command == 2:
-            self.servo.MoveTo(1, int(48*(4095 / 360)), 500)
+            self.servo.StartServo(1)
+            self.servo.MoveTo(1, 0, 500)  # Move to zero
         else:
+            self.servo.Rotate(1, 0)
             self.servo.StopServo(1)
 
     def timer_callback(self):
         pos = self.servo.ReadPosition(1)
         if pos is not None:
-            msg = Int32()
-            msg.data = pos
+            msg = Float64()
+            msg.data = float(pos * (360.0 / 4095.0))
             self.position_publisher.publish(msg)
 
 
