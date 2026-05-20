@@ -19,5 +19,11 @@ def generate_launch_description():
             executable='hospibot_led_node',
             name='hospibot_led_node',
             output='screen'
+        ),
+        Node(
+            package='body_bringup',
+            executable='actuators_pan',
+            name='actuators_pan',
+            output='screen'
         )
     ])
