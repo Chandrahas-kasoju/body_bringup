@@ -27,15 +27,14 @@ class ServoController(Node):
         command = msg.data
         if command == 1:
             self.servo.StartServo(1)
-            self.servo.Rotate(1, 1500)  # Move right
+            self.servo.MoveTo(1, int((300 + 90) * (4095 / 360)), 500)  # Move +90 from home
         elif command == -1:
             self.servo.StartServo(1)
-            self.servo.Rotate(1, -1500)  # Move left
+            self.servo.MoveTo(1, int((300 - 90) * (4095 / 360)), 500)  # Move -90 from home
         elif command == 2:
             self.servo.StartServo(1)
-            self.servo.MoveTo(1, 0, 500)  # Move to zero
+            self.servo.MoveTo(1, int(300 * (4095 / 360)), 500)  # Move to home (300 deg)
         else:
-            self.servo.Rotate(1, 0)
             self.servo.StopServo(1)
 
     def timer_callback(self):
