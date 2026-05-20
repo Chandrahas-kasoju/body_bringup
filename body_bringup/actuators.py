@@ -27,13 +27,13 @@ class ServoController(Node):
         command = msg.data
         if command == 1:
             self.servo.StartServo(1)
-            self.servo.MoveTo(1, int((300 + 90) * (4095 / 360)), 500)  # Move +90 from home
+            self.servo.MoveTo(1, int((300 + 90) * (4095 / 360)), 150)  # Move +90 from home
         elif command == -1:
             self.servo.StartServo(1)
-            self.servo.MoveTo(1, int((300 - 90) * (4095 / 360)), 500)  # Move -90 from home
+            self.servo.MoveTo(1, int((300 - 90) * (4095 / 360)), 150)  # Move -90 from home
         elif command == 2:
             self.servo.StartServo(1)
-            self.servo.MoveTo(1, int(300 * (4095 / 360)), 500)  # Move to home (300 deg)
+            self.servo.MoveTo(1, int(300 * (4095 / 360)), 150)  # Move to home (300 deg)
         else:
             self.servo.StopServo(1)
 
