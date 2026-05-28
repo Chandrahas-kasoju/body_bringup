@@ -72,7 +72,7 @@ class GenericServoController(Node):
             self.get_logger().error(f"Servo {self.sts_id} not connected!")
             
         # Target angle in degrees
-        self.target_angle_deg = 63.0  # Default starting target
+        self.target_angle_deg = 300.0  # Default starting target
         
         # Initialize PID controller for calculating speed based on position error
         # Max speed for ST3215 is roughly 3400 steps/s. Increased output limits so it can fight gravity.
