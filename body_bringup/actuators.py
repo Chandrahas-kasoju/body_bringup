@@ -140,8 +140,23 @@ class GenericServoController(Node):
             if current_pos_steps is None:
                 return
                 
-            # Convert step position to angle (0-4095 steps = 0-360 degrees)
-            current_angle_deg = (current_pos_steps / 4095.0) * 360.0
+            # Track previous step position to unwrap the 0-4095 boundary
+            if getattr(self, 'prev_pos_steps', None) is None:
+                self.prev_pos_steps = current_pos_steps
+                self.unwrapped_angle_deg = (current_pos_steps / 4095.0) * 360.0
+            
+            delta_steps = current_pos_steps - self.prev_pos_steps
+            # If the delta is suspiciously large (more than half a rotation), it wrapped
+            if delta_steps > 2048:
+                delta_steps -= 4096
+            elif delta_steps < -2048:
+                delta_steps += 4096
+                
+            self.prev_pos_steps = current_pos_steps
+            self.unwrapped_angle_deg += (delta_steps / 4095.0) * 360.0
+            
+            # Use the unwrapped angle for the PID loop
+            current_angle_deg = self.unwrapped_angle_deg
             
             # Publish for tuning/plotting
             self.current_angle_pub.publish(Float64(data=current_angle_deg))
