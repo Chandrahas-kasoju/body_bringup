@@ -53,6 +53,8 @@ class GenericServoController(Node):
         self.declare_parameter('use_software_pid', True) # Set to True to use custom PID
         self.declare_parameter('max_accel', 1000.0) # Max change in speed (steps/s) per second
         self.declare_parameter('max_decel', 1000.0) # Allow faster braking to prevent overshoot
+        self.declare_parameter('min_angle', 0.0) # Minimum allowed position in degrees
+        self.declare_parameter('max_angle', 360.0) # Maximum allowed position in degrees
         
         self.kp = self.get_parameter('kp').value
         self.ki = self.get_parameter('ki').value
@@ -62,6 +64,8 @@ class GenericServoController(Node):
         self.use_software_pid = self.get_parameter('use_software_pid').value
         self.max_accel = self.get_parameter('max_accel').value
         self.max_decel = self.get_parameter('max_decel').value
+        self.min_angle = self.get_parameter('min_angle').value
+        self.max_angle = self.get_parameter('max_angle').value
         
         self.current_speed_cmd = 0.0
         
@@ -72,7 +76,8 @@ class GenericServoController(Node):
             self.get_logger().error(f"Servo {self.sts_id} not connected!")
             
         # Target angle in degrees
-        self.target_angle_deg = 300.0  # Default starting target
+        initial_target = 300.0  # Default starting target
+        self.target_angle_deg = max(self.min_angle, min(self.max_angle, initial_target))
         
         # Initialize PID controller for calculating speed based on position error
         # Max speed for ST3215 is roughly 3400 steps/s. Increased output limits so it can fight gravity.
@@ -120,12 +125,18 @@ class GenericServoController(Node):
             elif param.name == 'max_decel':
                 self.max_decel = param.value
                 self.get_logger().info(f"Updated max_decel to {self.max_decel}")
+            elif param.name == 'min_angle':
+                self.min_angle = param.value
+                self.get_logger().info(f"Updated min_angle to {self.min_angle}")
+            elif param.name == 'max_angle':
+                self.max_angle = param.value
+                self.get_logger().info(f"Updated max_angle to {self.max_angle}")
         return SetParametersResult(successful=True)
 
     def target_callback(self, msg):
         """Callback to update the target angle from ROS topic"""
-        self.target_angle_deg = msg.data
-        self.get_logger().info(f"Received new target angle: {self.target_angle_deg} degrees")
+        self.target_angle_deg = max(self.min_angle, min(self.max_angle, msg.data))
+        self.get_logger().info(f"Received new target angle: {msg.data} degrees (clamped to {self.target_angle_deg})")
         
     def control_loop(self):
         """Main control loop running at fixed frequency"""
