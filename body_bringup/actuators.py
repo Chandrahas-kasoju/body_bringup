@@ -3,6 +3,8 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float64
 from rcl_interfaces.msg import SetParametersResult
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from st3215 import ST3215
 import time
 
@@ -101,7 +103,8 @@ class GenericServoController(Node):
         
         # Control loop timer (e.g., 20 Hz)
         self.timer_period = 0.05
-        self.timer = self.create_timer(self.timer_period, self.control_loop)
+        self.timer_cb_group = MutuallyExclusiveCallbackGroup()
+        self.timer = self.create_timer(self.timer_period, self.control_loop, callback_group=self.timer_cb_group)
         self.last_time = time.time()
         
         
@@ -215,8 +218,10 @@ class GenericServoController(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = GenericServoController()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
