@@ -11,7 +11,7 @@ import time
 # --- Configuration ---
 PIPER_EXECUTABLE  = "piper"
 # Updated to use a standard Danish Piper TTS model
-PIPER_MODEL_PATH  = "/root/piper-tts/da_DK-talesyntese-medium.onnx" 
+PIPER_MODEL_PATH  = "/root/piper-tts/da_DK/talesyntese-medium.onnx" 
 # Translated to Danish
 #SPEECH_TEXT       = "Hej, jeg er Tely. Tryk venligst på knappen på skærmen for at få hjælp."
 SPEECH_TEXT = "Hi, I am Tele. Please press the button on the screen for assistance" 
@@ -104,8 +104,12 @@ class RobotSpeechNode(Node):
             )
 
             if piper_result.returncode != 0:
+                stdout_str = piper_result.stdout.decode().strip()
+                stderr_str = piper_result.stderr.decode().strip()
                 self.get_logger().error(
-                    f"Piper failed: {piper_result.stderr.decode().strip()}"
+                    f"Piper failed (code {piper_result.returncode}).\n"
+                    f"STDOUT: {stdout_str}\n"
+                    f"STDERR: {stderr_str}"
                 )
                 return
 
