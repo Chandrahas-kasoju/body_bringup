@@ -24,6 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             'actuators_pan = body_bringup.actuators:main',
+            'speech_test = body_bringup.speech_test:main',
         ],
     },
 )
