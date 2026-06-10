@@ -11,9 +11,10 @@ import time
 # --- Configuration ---
 PIPER_EXECUTABLE  = "piper"
 # Updated to use a standard Danish Piper TTS model
-PIPER_MODEL_PATH  = "/home/manu/da_DK-talesyntese-medium.onnx" 
+PIPER_MODEL_PATH  = "/root/piper-tts/da_DK-talesyntese-medium.onnx" 
 # Translated to Danish
-SPEECH_TEXT       = "Hej, jeg er Tely. Tryk venligst på knappen på skærmen for at få hjælp." 
+#SPEECH_TEXT       = "Hej, jeg er Tely. Tryk venligst på knappen på skærmen for at få hjælp."
+SPEECH_TEXT = "Hi, I am Tele. Please press the button on the screen for assistance" 
 SPEECH_SPEED      = 1.2
 REPEAT_COOLDOWN_S = 10.0   # minimum seconds between any two greetings
 
