@@ -26,4 +26,10 @@ def generate_launch_description():
             name='actuators_pan',
             output='screen'
         ),
+        Node(
+            package='body_bringup',
+            executable='tele_mode',
+            name='tele_mode',
+            output='screen'
+        ),
     ])

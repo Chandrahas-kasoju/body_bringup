@@ -24,6 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             'actuators_pan = body_bringup.actuators:main',
+            'tele_mode = body_bringup.tele_mode:main',
         ],
     },
 )
