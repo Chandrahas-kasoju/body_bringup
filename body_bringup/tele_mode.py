@@ -97,6 +97,7 @@ class TeleMode(Node):
         self.create_timer(1.0, self.publish_mode)
         self.create_timer(0.2, self.sway)
         self.show_started = 0.0
+        self.home_until = 0.0
         self.player = None
         try:
             write_song(SONG_FILE)
@@ -121,8 +122,9 @@ class TeleMode(Node):
             self.show_started = time.time()
         if previous == 'CHRISTMAS':
             self.stop_music()
-            self.pan_pub.publish(Float64(data=PAN_HOME))
-            self.tilt_pub.publish(Float64(data=TILT_HOME))
+            # The sway timer sends the head home for the next two seconds. A single
+            # message from here could be overtaken by a last sway command.
+            self.home_until = time.time() + 2.0
         self.publish_mode()
         return True
 
@@ -132,6 +134,9 @@ class TeleMode(Node):
     # ---- Christmas show
     def sway(self):
         if self.mode != 'CHRISTMAS':
+            if time.time() < self.home_until:
+                self.pan_pub.publish(Float64(data=PAN_HOME))
+                self.tilt_pub.publish(Float64(data=TILT_HOME))
             return
         phase = 2 * math.pi * (time.time() - self.show_started) / SWAY_PERIOD_S
         self.pan_pub.publish(Float64(data=PAN_HOME + PAN_SWAY_DEG * math.sin(phase)))
