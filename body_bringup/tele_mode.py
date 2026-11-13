@@ -46,11 +46,11 @@ VOICES = {
 }
 ABOUT_TEXT = {
     'en': "Hi, I'm Tele. I'm a patrol robot for hospitals. "
-          "I find my way to patients with a thermal camera and a radar. "
-          "That way, I can look after them, and their privacy stays protected.",
+          "I use a thermal camera and a radar to detect patients. "
+          "That way, their privacy stays protected.",
     'de': 'Hallo, ich bin Tele. Ich bin ein Patrouillenroboter für Krankenhäuser. '
           'Patientinnen und Patienten erkenne ich mit einer Wärmebildkamera und einem Radar. '
-          'So kann ich auf sie achten, und ihre Privatsphäre bleibt geschützt.',
+          'So bleibt ihre Privatsphäre geschützt.',
 }
 
 # Head pose: pan is driven by the body, tilt by the head
