@@ -11,7 +11,7 @@ GUI uses (the GUI runs outside ROS):
     POST http://127.0.0.1:8011/about           -> Tele introduces itself out loud
 
 PATROL is the normal working mode. In CHRISTMAS mode this node plays Jingle Bells on the speaker and sways the
-head slowly. The LED node and the head's face tracker read /tele_mode themselves.
+head slowly. The show lasts 30 seconds and then returns to PATROL by itself. The LED node and the head's face tracker read /tele_mode themselves.
 """
 import json
 import math
@@ -30,6 +30,7 @@ from std_msgs.msg import Float64, String
 MODES = ('PATROL', 'CHRISTMAS')
 HTTP_PORT = 8011
 SONG_FILE = '/tmp/tele_jingle_bells.wav'
+SHOW_SECONDS = 30.0  # The Christmas show ends by itself after this long
 
 # "About Me": what Tele says about itself, per language. A language is only used
 # when its Piper voice file is installed; otherwise Tele falls back to English.
@@ -86,8 +87,16 @@ def note_hz(name):
 
 def write_song(path, beat_s=0.3, rate=22050):
     """Synthesise the tune with a bell-like tone and save it as a WAV file."""
-    notes = VERSE + CHORUS
-    total = sum(beats for _, beats in notes) * beat_s + 1.5
+    # The best-known part: the last line of the verse as a lead-in, then the whole
+    # chorus. That is 96 beats, which fills the 30 seconds of the show.
+    lead_in_beats, lead_in = 0, []
+    for note in reversed(VERSE):
+        if lead_in_beats >= 32:
+            break
+        lead_in.insert(0, note)
+        lead_in_beats += note[1]
+    notes = lead_in + CHORUS
+    total = min(sum(beats for _, beats in notes) * beat_s + 1.2, SHOW_SECONDS)
     audio = np.zeros(int(total * rate))
     start = 0.0
     for name, beats in notes:
@@ -172,14 +181,20 @@ class TeleMode(Node):
 
     def music_loop(self):
         while rclpy.ok():
-            if self.mode == 'CHRISTMAS' and os.path.exists(SONG_FILE):
+            if self.mode == 'CHRISTMAS':
+                # Play the song once. The show ends when it is over, or after
+                # SHOW_SECONDS at the latest, and Tele goes back to patrol by itself.
                 try:
-                    self.player = subprocess.Popen(['aplay', '-q', SONG_FILE])
-                    self.player.wait()
+                    if os.path.exists(SONG_FILE):
+                        self.player = subprocess.Popen(['aplay', '-q', SONG_FILE])
+                    while self.mode == 'CHRISTMAS' and time.time() - self.show_started < SHOW_SECONDS \
+                            and (self.player is None or self.player.poll() is None):
+                        time.sleep(0.1)
                 except Exception as e:
                     self.get_logger().error(f'Could not play the song: {e}')
-                    time.sleep(5)
-                time.sleep(0.5)  # Short pause before the song repeats
+                if self.mode == 'CHRISTMAS':
+                    self.get_logger().info('Christmas show finished')
+                    self.set_mode('PATROL')
             else:
                 time.sleep(0.2)
 
