@@ -26,10 +26,4 @@ def generate_launch_description():
             name='actuators_pan',
             output='screen'
         ),
-        Node(
-            package='body_bringup',
-            executable='speech_test',
-            name='robot_speech_node',
-            output='screen'
-        )
     ])
