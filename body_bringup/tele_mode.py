@@ -25,7 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float64, String
+from std_msgs.msg import Bool, Float64, String
 
 MODES = ('PATROL', 'CHRISTMAS')
 HTTP_PORT = 8011
@@ -125,6 +125,9 @@ class TeleMode(Node):
         self.mode_pub = self.create_publisher(String, '/tele_mode', 10)
         self.pan_pub = self.create_publisher(Float64, '/servo_command_pan', 10)
         self.tilt_pub = self.create_publisher(Float64, '/servo_command', 10)
+        # True while Tele is speaking, so the face on the head can move its mouth
+        self.speaking_pub = self.create_publisher(Bool, '/tele_speaking', 10)
+        self.was_speaking = False
         self.create_subscription(String, '/tele_mode_request', lambda m: self.set_mode(m.data), 10)
         self.create_timer(1.0, self.publish_mode)
         self.create_timer(0.2, self.sway)
@@ -168,7 +171,14 @@ class TeleMode(Node):
         self.mode_pub.publish(String(data=self.mode))
 
     # ---- Christmas show
+    def report_speaking(self):
+        speaking = self.about_player is not None and self.about_player.poll() is None
+        if speaking or self.was_speaking:
+            self.speaking_pub.publish(Bool(data=speaking))
+        self.was_speaking = speaking
+
     def sway(self):
+        self.report_speaking()
         if self.mode != 'CHRISTMAS':
             if time.time() < self.home_until:
                 self.pan_pub.publish(Float64(data=PAN_HOME))
