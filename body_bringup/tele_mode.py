@@ -8,6 +8,7 @@ GUI uses (the GUI runs outside ROS):
 
     GET  http://127.0.0.1:8011/mode            -> {"mode": "PATROL"}
     POST http://127.0.0.1:8011/mode/CHRISTMAS  -> switches mode
+    POST http://127.0.0.1:8011/about           -> Tele introduces itself out loud
 
 PATROL is the normal working mode. In CHRISTMAS mode this node plays Jingle Bells on the speaker and sways the
 head slowly. The LED node and the head's face tracker read /tele_mode themselves.
@@ -29,6 +30,22 @@ from std_msgs.msg import Float64, String
 MODES = ('PATROL', 'CHRISTMAS')
 HTTP_PORT = 8011
 SONG_FILE = '/tmp/tele_jingle_bells.wav'
+
+# "About Me": what Tele says about itself, per language. A language is only used
+# when its Piper voice file is installed; otherwise Tele falls back to English.
+ABOUT_FILE = '/tmp/tele_about.wav'
+ABOUT_SPEED = 1.5  # Piper length scale: 1.0 is normal speed, higher is slower
+VOICES = {
+    'en': '/root/piper-tts/en_GB-jenny_dioco-medium.onnx',
+    'de': '/root/piper-tts/de_DE-thorsten-medium.onnx',
+}
+ABOUT_TEXT = {
+    'en': 'Hi, I am Tele. I am a patrolling robot for hospitals. '
+          'I use a thermal camera and a radar to detect patients, and to preserve their privacy.',
+    'de': 'Hallo, ich bin Tele. Ich bin ein Patrouillenroboter für Krankenhäuser. '
+          'Ich nutze eine Wärmebildkamera und ein Radar, um Patientinnen und Patienten zu erkennen '
+          'und dabei ihre Privatsphäre zu schützen.',
+}
 
 # Head pose: pan is driven by the body, tilt by the head
 PAN_HOME, TILT_HOME = 300.0, 50.0
@@ -96,6 +113,9 @@ class TeleMode(Node):
         self.create_subscription(String, '/tele_mode_request', lambda m: self.set_mode(m.data), 10)
         self.create_timer(1.0, self.publish_mode)
         self.create_timer(0.2, self.sway)
+        self.declare_parameter('about_language', 'en')
+        self.about_seconds = 0.0
+        self.about_player = None
         self.show_started = 0.0
         self.home_until = 0.0
         self.player = None
@@ -104,6 +124,7 @@ class TeleMode(Node):
         except Exception as e:
             self.get_logger().error(f'Could not create the song: {e}')
         threading.Thread(target=self.music_loop, daemon=True).start()
+        threading.Thread(target=self.prepare_about, daemon=True).start()
         threading.Thread(target=self.serve_http, daemon=True).start()
         self.get_logger().info(f'Mode manager started in {self.mode} mode, web address on port {HTTP_PORT}')
 
@@ -161,6 +182,38 @@ class TeleMode(Node):
         if player is not None and player.poll() is None:
             player.terminate()
 
+    # ---- About Me
+    def prepare_about(self):
+        """Speak the introduction into a file once, so pressing the button answers at once."""
+        language = self.get_parameter('about_language').value
+        if language not in VOICES or not os.path.exists(VOICES[language]):
+            if language != 'en':
+                self.get_logger().warn(f'No voice installed for "{language}", using English')
+            language = 'en'
+        try:
+            subprocess.run(
+                ['piper', '--model', VOICES[language], '--length-scale', str(ABOUT_SPEED),
+                 '--output-file', ABOUT_FILE],
+                input=ABOUT_TEXT[language].encode('utf-8'), capture_output=True, timeout=120, check=True)
+            with wave.open(ABOUT_FILE) as f:
+                self.about_seconds = f.getnframes() / f.getframerate()
+            self.get_logger().info(f'About Me speech ready ({language}, {self.about_seconds:.0f} s)')
+        except Exception as e:
+            self.get_logger().error(f'Could not prepare the About Me speech: {e}')
+
+    def speak_about(self):
+        """Returns how many seconds the speech takes, or 0 if it cannot be spoken now."""
+        if self.about_seconds <= 0:
+            return 0.0
+        if self.about_player is not None and self.about_player.poll() is None:
+            return self.about_seconds  # Already speaking
+        if self.mode == 'CHRISTMAS':
+            self.set_mode('PATROL')  # Not over the music
+            time.sleep(0.3)
+        self.about_player = subprocess.Popen(['aplay', '-q', ABOUT_FILE])
+        self.get_logger().info('Speaking the About Me introduction')
+        return self.about_seconds
+
     # ---- web address for the GUI
     def serve_http(self):
         node = self
@@ -182,6 +235,10 @@ class TeleMode(Node):
 
             def do_POST(self):
                 parts = self.path.strip('/').split('/')
+                if parts == ['about']:
+                    seconds = node.speak_about()
+                    self.reply(200 if seconds else 503, {'speaking': seconds > 0, 'seconds': seconds})
+                    return
                 if len(parts) == 2 and parts[0] == 'mode' and node.set_mode(parts[1]):
                     self.reply(200, {'mode': node.mode})
                 else:
