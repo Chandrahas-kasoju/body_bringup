@@ -34,17 +34,23 @@ SONG_FILE = '/tmp/tele_jingle_bells.wav'
 # "About Me": what Tele says about itself, per language. A language is only used
 # when its Piper voice file is installed; otherwise Tele falls back to English.
 ABOUT_FILE = '/tmp/tele_about.wav'
-ABOUT_SPEED = 1.5  # Piper length scale: 1.0 is normal speed, higher is slower
+# Speech settings. Stretching every sound (a high length scale) is what makes a
+# voice robotic, so the pace stays close to natural and clarity comes from pauses
+# between sentences. The two noise values add the small variations in tone and
+# rhythm that a human voice has; this voice's own defaults (0.5 and 0.33) are flat.
+ABOUT_VOICE_ARGS = ['--length-scale', '1.1', '--sentence-silence', '0.55',
+                    '--noise-scale', '0.667', '--noise-w-scale', '0.8']
 VOICES = {
     'en': '/root/piper-tts/en_GB-jenny_dioco-medium.onnx',
     'de': '/root/piper-tts/de_DE-thorsten-medium.onnx',
 }
 ABOUT_TEXT = {
-    'en': 'Hi, I am Tele. I am a patrolling robot for hospitals. '
-          'I use a thermal camera and a radar to detect patients, and to preserve their privacy.',
+    'en': "Hi, I'm Tele. I'm a patrol robot for hospitals. "
+          "I find my way to patients with a thermal camera and a radar. "
+          "That way, I can look after them, and their privacy stays protected.",
     'de': 'Hallo, ich bin Tele. Ich bin ein Patrouillenroboter für Krankenhäuser. '
-          'Ich nutze eine Wärmebildkamera und ein Radar, um Patientinnen und Patienten zu erkennen '
-          'und dabei ihre Privatsphäre zu schützen.',
+          'Patientinnen und Patienten erkenne ich mit einer Wärmebildkamera und einem Radar. '
+          'So kann ich auf sie achten, und ihre Privatsphäre bleibt geschützt.',
 }
 
 # Head pose: pan is driven by the body, tilt by the head
@@ -192,8 +198,7 @@ class TeleMode(Node):
             language = 'en'
         try:
             subprocess.run(
-                ['piper', '--model', VOICES[language], '--length-scale', str(ABOUT_SPEED),
-                 '--output-file', ABOUT_FILE],
+                ['piper', '--model', VOICES[language], *ABOUT_VOICE_ARGS, '--output-file', ABOUT_FILE],
                 input=ABOUT_TEXT[language].encode('utf-8'), capture_output=True, timeout=120, check=True)
             with wave.open(ABOUT_FILE) as f:
                 self.about_seconds = f.getnframes() / f.getframerate()
