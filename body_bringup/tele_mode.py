@@ -6,10 +6,10 @@ and the body can follow it. It is changed either with a message on
 /tele_mode_request or through a small local web address that the touch-screen
 GUI uses (the GUI runs outside ROS):
 
-    GET  http://127.0.0.1:8011/mode            -> {"mode": "WORK"}
+    GET  http://127.0.0.1:8011/mode            -> {"mode": "PATROL"}
     POST http://127.0.0.1:8011/mode/CHRISTMAS  -> switches mode
 
-In CHRISTMAS mode this node plays Jingle Bells on the speaker and sways the
+PATROL is the normal working mode. In CHRISTMAS mode this node plays Jingle Bells on the speaker and sways the
 head slowly. The LED node and the head's face tracker read /tele_mode themselves.
 """
 import json
@@ -26,7 +26,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float64, String
 
-MODES = ('WORK', 'CHRISTMAS')
+MODES = ('PATROL', 'CHRISTMAS')
 HTTP_PORT = 8011
 SONG_FILE = '/tmp/tele_jingle_bells.wav'
 
@@ -88,7 +88,7 @@ class TeleMode(Node):
 
     def __init__(self):
         super().__init__('tele_mode')
-        self.mode = 'WORK'
+        self.mode = 'PATROL'
         self.lock = threading.Lock()
         self.mode_pub = self.create_publisher(String, '/tele_mode', 10)
         self.pan_pub = self.create_publisher(Float64, '/servo_command_pan', 10)
