@@ -55,6 +55,7 @@ class GenericServoController(Node):
         self.declare_parameter('use_software_pid', True) # Set to True to use custom PID
         self.declare_parameter('max_accel', 1000.0) # Max change in speed (steps/s) per second
         self.declare_parameter('max_decel', 1000.0) # Allow faster braking to prevent overshoot
+        self.declare_parameter('max_speed', 250.0) # Top speed in steps/s (about 0.088 deg per step); was fixed at 400
         self.declare_parameter('min_angle', 0.0) # Minimum allowed position in degrees
         self.declare_parameter('max_angle', 360.0) # Maximum allowed position in degrees
         
@@ -84,7 +85,8 @@ class GenericServoController(Node):
         # Initialize PID controller for calculating speed based on position error
         # Max speed for ST3215 is roughly 3400 steps/s. Increased output limits so it can fight gravity.
         # Added a 0.5 degree deadband to provide tolerance and stop jittering once it reaches the target.
-        self.pid = PIDController(self.kp, self.ki, self.kd, output_limits=(-400, 400), deadband=1.0)
+        max_speed = self.get_parameter('max_speed').value
+        self.pid = PIDController(self.kp, self.ki, self.kd, output_limits=(-max_speed, max_speed), deadband=1.0)
         
         # Register parameter callback for dynamic tuning
         self.add_on_set_parameters_callback(self.parameters_callback)
@@ -122,6 +124,9 @@ class GenericServoController(Node):
                 self.kd = param.value
                 self.pid.kd = self.kd
                 self.get_logger().info(f"Updated kd to {self.kd}")
+            elif param.name == 'max_speed':
+                self.pid.min_out, self.pid.max_out = -param.value, param.value
+                self.get_logger().info(f"Updated max_speed to {param.value}")
             elif param.name == 'max_accel':
                 self.max_accel = param.value
                 self.get_logger().info(f"Updated max_accel to {self.max_accel}")
